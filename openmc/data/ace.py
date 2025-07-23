@@ -400,18 +400,15 @@ class Library(EqualityMixin):
             jxs = np.fromstring(datastr, dtype=int, sep=' ')
 
             datastr = '0.0 ' + ''.join(lines[_ACE_HEADER_SIZE:_ACE_HEADER_SIZE + n_lines])
-            xss = np.fromstring(datastr, sep=' ')
-
-            # When NJOY writes an ACE file, any values less than 1e-100 actually
-            # get written without the 'e'. Thus, what we do here is check
-            # whether the xss array is of the right size (if a number like
-            # 1.0-120 is encountered, np.fromstring won't capture any numbers
-            # after it). If it's too short, then we apply the ENDF float regular
-            # expression. We don't do this by default because it's expensive!
-            if xss.size != nxs[1] + 1:
+            try:
+                # When NJOY writes an ACE file, any values less than 1e-100 actually
+                # get written without the 'e'. As of numpy 2.3 this causes np.fromstring
+                # to raise a ValueError. If this error is raised, then we apply the ENDF 
+                # float regular expression. We don't do this by default because it's expensive!
+                xss = np.fromstring(datastr, sep=' ')
+            except ValueError:
                 datastr = ENDF_FLOAT_RE.sub(r'\1e\2\3', datastr)
                 xss = np.fromstring(datastr, sep=' ')
-                assert xss.size == nxs[1] + 1
 
             table = Table(name, atomic_weight_ratio, temperature, pairs,
                           nxs, jxs, xss)
